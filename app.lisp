@@ -58,7 +58,7 @@
       
       ;; Delete
       (datafly:execute 
-        (delete-from :sample (where (:= name "Sample 4"))))))
+        (delete-from :sample (where (:= :name "Sample 4"))))))
 
 ;;; On server shutdown
 (defun siki:shutdown ()

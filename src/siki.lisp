@@ -2,7 +2,7 @@
 
 ;; Variables
 (defparameter *siki-server* nil)
-(defparameter *templates* (make-hash-table :test #'equal))
+(defparameter *preload-templates* (make-hash-table :test #'equal))
 (defparameter *configuration* :development)
 (defparameter *time-to-shutdown* nil)
 (defparameter *max-time-to-shutdown* (* 5 60))
@@ -14,6 +14,7 @@
 (setf djula:*fancy-error-template-p* nil)
 (setf djula:*auto-escape* nil)
 (djula:add-template-directory "templates/")
+(djula:add-template-directory "siki-templates/")
 
 ;;; Read file
 (defun slurp (path)
@@ -23,6 +24,19 @@
 (defun spit (path content)
   (alexandria:write-string-into-file content path 
     :external-format :utf-8 :if-exists :supersede))
+
+;;; Add preload template
+(defun add-preload-template (name)
+  (setf (gethash name *preload-templates*) 
+        (djula:render-template* 
+          (djula:compile-template* name) nil nil)))
+
+;;; Get preload template
+(defun preload-template (name) 
+  (if (equal *configuration* :development)
+      (djula:render-template* 
+        (djula:compile-template* name) nil nil)
+      (gethash name *preload-templates*)))
 
 ;;; Check table exists
 (defun p-table-exists (table-name)
@@ -101,18 +115,25 @@
 (defun keep-server-alive ()
   (setf *time-to-shutdown* *max-time-to-shutdown*))
 
-;;; GET /keep-alive
-(defroute get-keep-alive ("/keep-alive" :method :get) ()
+;;; Add preload template
+(add-preload-template "control.html")
+
+;;; GET /siki/keep-alive
+(defroute get-keep-alive ("/siki/keep-alive" :method :get) ()
   (keep-server-alive)
   (json:encode-json-to-string 
     `(:success t :time ,*time-to-shutdown*)))
 
-;;; GET /server-state
-(defroute get-server-state ("/server-state" :method :get) ()
+;;; GET /siki/server-state
+(defroute get-server-state ("/siki/server-state" :method :get) ()
   (json:encode-json-to-string 
     `((:success . t) 
       (:siki-port . ,*siki-port*)
       (:swank-port . ,*swank-port*))))
+
+;;; GET /siki/control
+(defroute get-siki-control ("/siki/control" :method :get) ()
+  (preload-template "control.html"))
 
 (in-package :cl-user)
 

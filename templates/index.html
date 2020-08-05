@@ -20,7 +20,7 @@
 
 {% block sub-script %}
 <script>
-  fetch("/server-state",{
+  fetch("/siki/server-state",{
     method: "GET",
     headers: { "Content-Type": "application/json" }
   })
