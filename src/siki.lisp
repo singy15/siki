@@ -135,5 +135,15 @@
 (defroute get-siki-control ("/siki/control" :method :get) ()
   (preload-template "control.html"))
 
+;;; GET /siki/reload
+(defroute get-siki-reload ("/siki/reload" :method :get) ()
+  ;; Load source
+  (load "./app.lisp")
+  
+  ;; Return result
+  (json:encode-json-to-string
+    `((:success . t)
+      (:msg . "Application reloaded"))))
+
 (in-package :cl-user)
 
