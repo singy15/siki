@@ -49,6 +49,13 @@
                         (:= :name table-name))))) 
            :cnt) 0))
 
+;; Timestamp
+(defun get-timestamp ()  
+  (multiple-value-bind 
+    (ss mm hh d m y) 
+    (decode-universal-time (get-universal-time))
+    (format nil "~4,'0d~2,'0d~2,'0d~2,'0d~2,'0d~2,'0d" y m d hh mm ss)))
+
 ;;; On server startup
 (defun startup ()
   nil)
@@ -143,7 +150,7 @@
   ;; Return result
   (json:encode-json-to-string
     `((:success . t)
-      (:msg . "Application reloaded"))))
+      (:msg . ,(format nil "Application reloaded: ~a" (get-timestamp))))))
 
 (in-package :cl-user)
 
