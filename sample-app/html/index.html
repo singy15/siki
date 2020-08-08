@@ -5,30 +5,246 @@
 
 {% block sub-style %}
 <style>
-  * { font-size: x-small; }
+  * {
+    font-size: x-small;
+    outline: none;
+  }
+
+  table.list {
+    border-collapse: collapse;
+  }
+
+  table.list tr {
+    height: 24px;
+  }
+
+  table.list td,th {
+    border: solid 1px #333;
+    padding: 0px;
+    vertical-align: top;
+  }
+
+  table.list input[type="text"] {
+    margin: 0px;
+    box-sizing: border-box;
+    width: 100%;
+    height: 24px;
+    border: none;
+    background-color: rgba(0,0,0,0);
+  }
+
+  table.list th textarea {
+    margin: 0px;
+    height: 10px;
+    overflow: hidden;
+    resize: horizontal;
+    display: block;
+    margin: 0px !important;
+    box-sizing: border-box;
+    border: none;
+  }
+
+  table.list td textarea {
+    margin: 0px;
+    height: 24px;
+    overflow: hidden;
+    resize: vertical;
+    display: block;
+    margin: 0px !important;
+    width: 100% !important;
+    box-sizing: border-box;
+    border: none;
+    min-height: 24px;
+    background-color: rgba(0,0,0,0);
+  }
+
+  table.list input[type="checkbox"] {
+    border: none;
+  }
+
+  table.list input:focus[type="checkbox"] {
+    outline: solid 1px #F00;
+  }
+
+  select,option {
+    height: 24px;
+    border: none;
+    background-color: rgba(0,0,0,0);
+  }
+
+  select:focus {
+    background-color: rgba(0,0,0,0);
+    outline: solid 1px #F00;
+  }
+
+  #mask {
+    position: absolute;
+    top: 0px;
+    right: 0px;
+    bottom: 0px;
+    left: 0px;
+    background-color: #FFF;
+    vertical-align: center;
+    text-align: center;
+  }
 </style>
 {% endblock %}
 
-{% block sub-title %}siki - index{% endblock %}
+{% block sub-title %}siki - sample app{% endblock %}
 
 {% block sub-content %}
-<h1>siki</h1>
-<span id="siki-port"></span>
-<br>
-<span id="swank-port"></span>
+<div id="app">
+  <div>
+    <h1>siki - sample application</h1>
+    <span>siki :[[ sikiPort ]]</span>
+    <span>swank :[[ swankPort ]]</span>
+  </div>
+
+  <hr>
+
+  <div>
+    <table class="list">
+      <tr>
+        <th style="width:16px;">&nbsp;</th>
+        <th>ID<textarea style="width:2px; resize:none;" readonly></textarea></th>
+        <th>Category<textarea style="width:2px; resize:none;" readonly></textarea></th>
+        <th>Subject<textarea style="min-width:300px;" readonly></textarea></th>
+        <th>Desc<textarea style="min-width:600px;" readonly></textarea></th>
+        <th>Assig.<textarea style="width:2px; resize:none;" readonly></textarea></th>
+        <th>Status<textarea style="width:2px; resize:none;" readonly></textarea></th>
+      </tr>
+      <tr v-for="row in rows " :style="rowStyle(row)">
+        <td style="text-align:center;">
+          <input v-if="row.id" style="width: 8px;" type="checkbox" :value="row.id" v-model="selection">
+        </td>
+        <td><div style="width: 20px; text-align: center;">[[ row.id ]]</div></td>
+        <td><input type="text" v-model="row.category" @change="upsertIssue(row)" style="width: 100px;"/></td>
+        <td><textarea v-model="row.subject" @change="upsertIssue(row)" @focus="extractTextarea($event)" @blur="retractTextarea($event);" style="width: 200px;"></textarea></td>
+        <td><textarea v-model="row.desc" @change="upsertIssue(row);" @focus="extractTextarea($event)" @blur="retractTextarea($event);"></textarea></td>
+        <td><input type="text" v-model="row.assignedTo" @change="upsertIssue(row)" style="width: 80px;"/></td>
+        <td>
+          <select v-model="row.status" @change="upsertIssue(row)" style="width: 80px">
+            <option value="NW">New</option>
+            <option value="IP">In Progress</option>
+            <option value="RV">Review</option>
+            <option value="PD">Pending</option>
+            <option value="CL">Closed</option>
+            <option value="AB">Abort</option>
+          </select>
+        </td>
+      </tr>
+    </table>
+    <br>
+    <button @click="deleteIssue">DELETE</button>
+  </div>
+</div>
 {% endblock %}
 
 {% block sub-script %}
+<script src="/public/lib/vue.js"></script>
 <script>
+  var app = new Vue({
+    el: "#app",
+    delimiters: ["[[","]]"],
+    data: {
+      sikiPort: "",
+      swankPort: "",
+      rows: [],
+      selection: [],
+    },
+    methods: {
+      fetchIssue: function() {
+        var self = this;
+        fetch("/issues",{
+          method: "GET",
+          headers: { "Content-Type": "application/json" }
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+          self.rows = (data)? data : [];
+          self.rows.unshift({
+            id: "", 
+            category: "",
+            subject: "", 
+            desc: "", 
+            assignedTo: "", 
+            status: ""
+          });
+        });
+      },
+      upsertIssue: function(row) {
+        var self = this;
+        fetch("/issues",{
+          method: "POST",
+          body: JSON.stringify(row),
+          headers: { "Content-Type": "application/json" }
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+          self.fetchIssue();
+          self.showMessage("INFO", "SUCCESSFULLY UPDATED");
+        });
+      },
+      deleteIssue: function() {
+        var self = this;
+        fetch("/issues",{
+          method: "DELETE",
+          body: JSON.stringify(self.selection),
+          headers: { "Content-Type": "application/json" }
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+          self.fetchIssue();
+          self.showMessage("INFO", "SUCCESSFULLY DELETED");
+        });
+      },
+      extractTextarea: function(event) {
+        event.target.style.height = "10px";
+        var wSclollHeight = parseInt(event.target.scrollHeight);
+        var wLineH = parseInt(event.target.style.lineHeight.replace(/px/, ''));
+        if(wSclollHeight < (wLineH * 2)){wSclollHeight=(wLineH * 2);}
+        if(wSclollHeight < 24) {
+          event.target.style.height = 24 + "px";
+        } else {
+          event.target.style.height = wSclollHeight + "px";
+        }
+      },
+      retractTextarea: function(event) {
+        event.target.scrollTop = 0;
+        event.target.style.height = "24px";
+      },
+      rowStyle: function(row) {
+        switch(row.status) {
+          case 'CL':
+            return 'background-color: #E6E6E6';
+          case 'RV':
+            return 'background-color: #E3F6CE';
+          case 'AB':
+            return 'background-color: #E6E6E6';
+          case 'PD':
+            return 'background-color: #F6CED8';
+          case 'IP':
+            return 'background-color: #E0E6F8';
+        }
+
+        return '';
+      },
+      showMessage: function(type, msg) {
+      }
+    }
+  });
+
   fetch("/siki/server-state",{
     method: "GET",
     headers: { "Content-Type": "application/json" }
   })
   .then(function(response) { return response.json(); })
   .then(function(data) {
-    document.getElementById("siki-port").innerHTML = "siki: " + data.sikiPort.toString();
-    document.getElementById("swank-port").innerHTML = "swank: " + data.swankPort.toString();
+    app.sikiPort = data.sikiPort.toString();
+    app.swankPort = data.swankPort.toString();
   });
+
+  app.fetchIssue();
 </script>
 {% endblock %}
 
