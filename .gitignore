@@ -3,3 +3,6 @@ master.db
 siki
 siki.exe
 release/
+html/
+lisp/
+static/
