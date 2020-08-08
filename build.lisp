@@ -1,10 +1,9 @@
 (ql:quickload :siki)
 
-(setf siki::*configuration* :production)
+(setf siki::*config* :development)
 
 (sb-ext:save-lisp-and-die 
   "siki" 
   :toplevel #'siki:start-siki-server 
-  :executable t 
-  :application-type :gui)
+  :executable t )
 
