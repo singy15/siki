@@ -2,19 +2,20 @@
 
 ;; Variables
 (defparameter *siki-server* nil)
-(defparameter *preload-templates* (make-hash-table :test #'equal))
-(defparameter *configuration* :development)
+(defparameter *config* :development) ; :development / :production
 (defparameter *time-to-shutdown* nil)
 (defparameter *max-time-to-shutdown* (* 5 60))
 (defparameter *siki-port* nil)
 (defparameter *swank-port* nil)
+(defparameter *app-file-modified* nil)
+(defparameter *app-src* #p"./app.lisp")
+(defparameter *db-path* "./master.db")
 
 ;; Configuration
 (setf djula:*catch-template-errors-p* nil)
 (setf djula:*fancy-error-template-p* nil)
 (setf djula:*auto-escape* nil)
 (djula:add-template-directory "templates/")
-(djula:add-template-directory "siki-templates/")
 
 ;;; Read file
 (defun slurp (path)
@@ -24,19 +25,6 @@
 (defun spit (path content)
   (alexandria:write-string-into-file content path 
     :external-format :utf-8 :if-exists :supersede))
-
-;;; Add preload template
-(defun add-preload-template (name)
-  (setf (gethash name *preload-templates*) 
-        (djula:render-template* 
-          (djula:compile-template* name) nil nil)))
-
-;;; Get preload template
-(defun preload-template (name) 
-  (if (equal *configuration* :development)
-      (djula:render-template* 
-        (djula:compile-template* name) nil nil)
-      (gethash name *preload-templates*)))
 
 ;;; Check table exists
 (defun p-table-exists (table-name)
@@ -91,10 +79,11 @@
   (swank:create-server :port *swank-port* :dont-close t)
   
   ;; Load source
-  (load "./app.lisp")
+  (load *app-src*)
+  (setf *app-file-modified* (file-write-date *app-src*))
 
   ;; Connect
-  (datafly:connect-toplevel :sqlite3 :database-name "./master.db") 
+  (datafly:connect-toplevel :sqlite3 :database-name *db-path*) 
   
   ;; Startup
   (startup)
@@ -116,14 +105,19 @@
 
       ;; Exit
       (cl-user::exit))
+    
+    ;; Reload
+    (when (and (equal *config* :development)
+               (not (equal *app-file-modified* (file-write-date *app-src*))))
+      (load *app-src*)
+      (setf *app-file-modified* (file-write-date *app-src*))
+      (format t "Application reloaded: ~a~%" *app-file-modified*))
+    
     (sleep 1)))
 
 ;;; Reset kill timer
 (defun keep-server-alive ()
   (setf *time-to-shutdown* *max-time-to-shutdown*))
-
-;;; Add preload template
-(add-preload-template "control.html")
 
 ;;; GET /siki/keep-alive
 (defroute get-keep-alive ("/siki/keep-alive" :method :get) ()
@@ -138,19 +132,19 @@
       (:siki-port . ,*siki-port*)
       (:swank-port . ,*swank-port*))))
 
-;;; GET /siki/control
-(defroute get-siki-control ("/siki/control" :method :get) ()
-  (preload-template "control.html"))
-
 ;;; GET /siki/reload
 (defroute get-siki-reload ("/siki/reload" :method :get) ()
   ;; Load source
-  (load "./app.lisp")
+  (load *app-src*)
   
   ;; Return result
   (json:encode-json-to-string
     `((:success . t)
       (:msg . ,(format nil "Application reloaded: ~a" (get-timestamp))))))
+
+;;; GET /siki/shutdown
+(defroute get-siki-shutdown ("/siki/shutdown" :method :get) ()
+  (cl-user::exit))
 
 (in-package :cl-user)
 
