@@ -7,15 +7,16 @@
 (defparameter *max-time-to-shutdown* (* 5 60))
 (defparameter *siki-port* nil)
 (defparameter *swank-port* nil)
-(defparameter *app-file-modified* nil)
-(defparameter *app-src* #p"./app.lisp")
+; (defparameter *app-file-modified* nil)
+; (defparameter *app-src* #p"./app.lisp")
+(defparameter *lisp-modified* (make-hash-table))
 (defparameter *db-path* "./master.db")
 
 ;; Configuration
 (setf djula:*catch-template-errors-p* nil)
 (setf djula:*fancy-error-template-p* nil)
 (setf djula:*auto-escape* nil)
-(djula:add-template-directory "templates/")
+(djula:add-template-directory "html/")
 
 ;;; Read file
 (defun slurp (path)
@@ -67,7 +68,7 @@
         (make-instance 
           'easy-routes:easy-routes-acceptor 
           :port *siki-port*
-          :document-root "document-root/"))
+          :document-root "static/"))
   
   ;; Start listen
   (hunchentoot:start *siki-server*)
@@ -79,8 +80,12 @@
   (swank:create-server :port *swank-port* :dont-close t)
   
   ;; Load source
-  (load *app-src*)
-  (setf *app-file-modified* (file-write-date *app-src*))
+  (mapcar 
+    (lambda (path)
+      (load path)
+      (setf (gethash path *lisp-modified*) (file-write-date path))
+      (format t "~a loaded ~a~%" path (file-write-date path))) 
+    (directory "./lisp/**/*.lisp"))
 
   ;; Connect
   (datafly:connect-toplevel :sqlite3 :database-name *db-path*) 
@@ -107,11 +112,14 @@
       (cl-user::exit))
     
     ;; Reload
-    (when (and (equal *config* :development)
-               (not (equal *app-file-modified* (file-write-date *app-src*))))
-      (load *app-src*)
-      (setf *app-file-modified* (file-write-date *app-src*))
-      (format t "Application reloaded: ~a~%" *app-file-modified*))
+    (maphash 
+      (lambda (key val)
+        (when (and (equal *config* :development)
+                   (not (equal (gethash key *lisp-modified*) (file-write-date key))))
+          (load key)
+          (setf (gethash key *lisp-modified*) (file-write-date key))
+          (format t "~a reloaded ~a~%" key (file-write-date key))))
+      *lisp-modified*)
     
     (sleep 1)))
 
@@ -135,7 +143,7 @@
 ;;; GET /siki/reload
 (defroute get-siki-reload ("/siki/reload" :method :get) ()
   ;; Load source
-  (load *app-src*)
+  ; (load *app-src*)
   
   ;; Return result
   (json:encode-json-to-string
