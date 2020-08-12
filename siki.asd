@@ -11,7 +11,9 @@
     "cl-json" 
     "local-time" 
     "alexandria" 
-    "mito")
+    "mito"
+    "cl-ppcre"
+    "cl-fad")
   :components ((:module "src"
                 :components
                 ((:file "package-siki")
