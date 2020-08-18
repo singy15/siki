@@ -82,7 +82,7 @@
   ;; Load source
   (mapcar 
     (lambda (path)
-      (load path)
+      (load path :external-format :utf-8)
       (setf (gethash path *lisp-modified*) (file-write-date path))
       (format t "~a loaded ~a~%" path (file-write-date path))) 
     (directory "./lisp/**/*.lisp"))
@@ -116,7 +116,7 @@
       (lambda (key val)
         (when (and (equal *config* :development)
                    (not (equal (gethash key *lisp-modified*) (file-write-date key))))
-          (load key)
+          (load key :external-format :utf-8)
           (setf (gethash key *lisp-modified*) (file-write-date key))
           (format t "~a reloaded ~a~%" key (file-write-date key))))
       *lisp-modified*)

@@ -13,7 +13,8 @@
     "alexandria" 
     "mito"
     "cl-ppcre"
-    "cl-fad")
+    "cl-fad"
+    "dbd-sqlite3")
   :components ((:module "src"
                 :components
                 ((:file "package-siki")
