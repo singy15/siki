@@ -1,6 +1,7 @@
 (ql:quickload :siki)
 
-(setf siki::*config* :development)
+(setf siki::*config* :production)
+(setf siki::*os-type* :linux)
 
 (sb-ext:save-lisp-and-die 
   "siki" 

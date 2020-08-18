@@ -2,7 +2,7 @@
 
 ;; Variables
 (defparameter *siki-server* nil)
-(defparameter *config* :development) ; :development / :production
+(defparameter *config* :development) ; :development | :production
 (defparameter *time-to-shutdown* nil)
 (defparameter *max-time-to-shutdown* (* 5 60))
 (defparameter *siki-port* nil)
@@ -11,6 +11,7 @@
 ; (defparameter *app-src* #p"./app.lisp")
 (defparameter *lisp-modified* (make-hash-table))
 (defparameter *db-path* "./master.db")
+(defparameter *os-type* :linux) ; :linux | :mswin
 
 ;; Configuration
 (setf djula:*catch-template-errors-p* nil)
@@ -95,7 +96,8 @@
   
   ;; Auto open browser
   (sb-ext:run-program 
-    "/usr/bin/xdg-open" 
+    (cond ((equal *os-type* :linux) "/usr/bin/xdg-open")
+          ((equal *os-type* :mswin) "C:\\Windows\\explorer.exe")) 
     (list (format nil "http://localhost:~a/" *siki-port*)) :wait nil)
 
   ;; Wait for shutdown
