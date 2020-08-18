@@ -2,6 +2,8 @@
 master.db
 siki
 siki.exe
+siki-console
+siki-console.exe
 release/
 html/
 lisp/
